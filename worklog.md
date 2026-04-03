@@ -23,3 +23,26 @@ Stage Summary:
 - Navigation buttons have stopPropagation to prevent click bubbling
 - Loading screen now has 5s safety timeout to prevent infinite loading
 - Key files modified: page.tsx, about-terminal.tsx, package.json
+---
+Task ID: 1
+Agent: Main Agent
+Task: Rollback CRT About Terminal feature and restore app to working state
+
+Work Log:
+- Investigated git history — found no existing rollback checkpoint (only 2 commits)
+- Identified all terminal-related files: about-terminal.tsx, about-docs.ts (new), and modifications to use-lumina-store.ts, settings-modal.tsx, page.tsx, globals.css
+- Deleted about-terminal.tsx and about-docs.ts
+- Removed aboutTerminalOpen state and setAboutTerminalOpen action from Zustand store
+- Removed Terminal import and launch button from settings-modal.tsx About tab
+- Removed AboutTerminal import and render from page.tsx
+- Removed CRT-specific CSS: scanline, crt-flicker keyframes, and all .crt-* overlay/glow/cursor/logo styles from globals.css
+- Ran lint — passed clean with zero errors
+- Started dev server — app returns HTTP 200 (23,950 bytes), correct title
+- Committed rollback as checkpoint fdec0bf
+
+Stage Summary:
+- App is now at clean v0.3.0 state (before terminal feature was added)
+- All terminal code removed (-892 lines)
+- Git checkpoint created for future reference
+- Lint clean, app loads successfully
+
