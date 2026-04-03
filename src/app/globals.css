@@ -117,23 +117,6 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Optional scanline texture — performance-conscious */
-  body::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 9999;
-    background-image: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(255, 255, 255, 0.006) 2px,
-      rgba(255, 255, 255, 0.006) 4px
-    );
-    opacity: 0.4;
-  }
-
   /* ── Custom Scrollbar ── */
   ::-webkit-scrollbar {
     width: 4px;
