@@ -46,3 +46,25 @@ Stage Summary:
 - Git checkpoint created for future reference
 - Lint clean, app loads successfully
 
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Diagnose and fix why app not showing in Preview Panel
+
+Work Log:
+- Confirmed code was clean (no broken imports, lint passed, no terminal references)
+- Used browser agent (agent-browser) to test actual client-side rendering
+- Discovered page was stuck on "Loading workspace…" — never hydrated
+- Zero console errors, but service worker logs showed "New service worker activated — refresh available"
+- Found root cause: service worker (sw.js) cached '/' (the app shell HTML)
+- When dev server restarts, Turbopack generates new chunk hash URLs
+- Cached HTML still referenced OLD chunk hashes → JS failed to load → app stuck at loading spinner
+- Fixed sw.js: removed '/' from STATIC_ASSETS, skip /_next/ from caching, bumped cache v1→v2
+- Browser test confirmed: full app UI renders (topbar, sidebar, editor, AI panel)
+
+Stage Summary:
+- Root cause: stale service worker cache blocking app hydration
+- Fix: network-first for app shell, skip Next.js dev assets from caching
+- Committed as 18e269e
+- Browser agent verified full UI renders correctly
