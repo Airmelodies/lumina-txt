@@ -1,17 +1,18 @@
 /// <reference lib="webworker" />
 
-const CACHE_NAME = 'lumina-txt-v1';
+const CACHE_NAME = 'lumina-txt-v2';
 const STATIC_ASSETS = [
-  '/',
   '/manifest.json',
   '/logo.svg',
 ];
 
-// ─── Install: cache static shell ────────────────────────────
+// ─── Install: cache static assets only (skip / in dev) ─────
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(STATIC_ASSETS);
+    }).catch(() => {
+      // Swallow errors for missing assets in dev
     })
   );
   // Activate immediately without waiting for old worker to finish
@@ -43,6 +44,12 @@ self.addEventListener('fetch', (event) => {
   // Skip API routes (AI, etc.)
   if (request.url.includes('/api/')) return;
 
+  // Skip Next.js dev assets — never cache turbopack chunks
+  if (request.url.includes('/_next/')) return;
+
+  // Skip HMR and WebSocket connections
+  if (request.url.includes('__next_hmr') || request.url.includes('/__nextjs')) return;
+
   // Skip chrome-extension and other non-http(s)
   if (!request.url.startsWith('http')) return;
 
@@ -64,7 +71,8 @@ self.addEventListener('fetch', (event) => {
           if (cached) return cached;
           // For navigation requests, serve cached /
           if (request.mode === 'navigate') {
-            return caches.match('/');
+            // Don't serve cached HTML — always try network for app shell
+            return new Response('Offline', { status: 503, statusText: 'Offline' });
           }
           return new Response('Offline', { status: 503, statusText: 'Offline' });
         });
