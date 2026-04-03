@@ -23,8 +23,10 @@ export function usePWA() {
   const installedRef = useRef(getStandaloneStatus());
 
   useEffect(() => {
-    // ── Register the service worker ──
-    if ('serviceWorker' in navigator) {
+    // ── Register the service worker (production only) ──
+    // In development, service workers cause stale cache issues
+    // with Turbopack's hash-based chunk filenames.
+    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
       navigator.serviceWorker
         .register('/sw.js')
         .then((registration) => {
@@ -48,6 +50,13 @@ export function usePWA() {
         .catch((err) => {
           console.warn('[LXT] Service worker registration failed:', err);
         });
+    } else if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      // Dev mode: unregister any existing service worker to prevent stale cache issues
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        registrations.forEach((reg) => {
+          reg.unregister().then(() => console.log('[LXT] Dev mode: unregistered service worker'));
+        });
+      });
     }
 
     // ── Listen for the install prompt ──
