@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, type FormEvent } from 'react';
-import { Trash2, Database, Cpu, User, FolderKanban, Zap, Info, FolderOpen, Terminal } from 'lucide-react';
+import { Trash2, Database, Cpu, User, FolderKanban, Zap, Info, FolderOpen } from 'lucide-react';
 import { useLuminaStore, type AISettings, type Persona, type PersonaTone, type Project, type Skill } from '@/store/use-lumina-store';
 import { saveSettings, savePersona, deleteProject as deleteProjectFromDB, clearAllSkills, clearAllFiles, clearAllFolders } from '@/lib/indexeddb';
 import { requestDirectoryHandle } from '@/lib/file-actions';
@@ -590,7 +590,6 @@ function AboutTab() {
   const files = useLuminaStore((s) => s.files);
   const projects = useLuminaStore((s) => s.projects);
   const skills = useLuminaStore((s) => s.skills);
-  const setAboutTerminalOpen = useLuminaStore((s) => s.setAboutTerminalOpen);
   const setSettingsOpen = useLuminaStore((s) => s.setSettingsOpen);
 
   const handleClearAllData = useCallback(async () => {
@@ -615,27 +614,6 @@ function AboutTab() {
         <div className="font-mono text-[9px] text-text-mute mt-0.5">
           v0.3.0 — AI-Powered Text Manager
         </div>
-      </div>
-
-      <div className="h-px bg-border-dim" />
-
-      {/* Terminal launcher */}
-      <div>
-        <span className={labelClasses}>Terminal</span>
-        <button
-          onClick={() => {
-            setSettingsOpen(false);
-            setTimeout(() => setAboutTerminalOpen(true), 200);
-          }}
-          className="w-full mt-2 text-left px-3 py-2.5 border border-accent-dim/40 text-accent-primary bg-accent-glow font-mono text-[10px] tracking-[0.06em] uppercase rounded-[2px] hover:bg-accent-glow-strong hover:border-accent-dim transition-colors cursor-pointer flex items-center gap-2"
-        >
-          <Terminal size={12} className="shrink-0" />
-          Launch About Terminal
-          <span className="ml-auto text-[8px] text-accent-dim tracking-wider font-normal">EASTER EGG</span>
-        </button>
-        <p className="font-mono text-[8px] text-text-mute mt-1">
-          CRT-style terminal with boot sequence, commands, and immersive reader
-        </p>
       </div>
 
       <div className="h-px bg-border-dim" />

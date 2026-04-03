@@ -112,7 +112,6 @@ export interface LuminaState {
   sidebarTab: SidebarTab;
   aiPanelOpen: boolean;
   settingsOpen: boolean;
-  aboutTerminalOpen: boolean;
   settingsTab: 'general' | 'ai-providers' | 'persona' | 'projects' | 'skills' | 'about';
   newFileModalOpen: boolean;
   deleteModalOpen: boolean;
@@ -183,7 +182,6 @@ export interface LuminaActions {
   setSidebarTab: (tab: SidebarTab) => void;
   toggleAIPanel: () => void;
   setSettingsOpen: (open: boolean) => void;
-  setAboutTerminalOpen: (open: boolean) => void;
   setSettingsTab: (tab: LuminaState['settingsTab']) => void;
   setNewFileModalOpen: (open: boolean) => void;
   setDeleteModalOpen: (open: boolean, fileId?: string) => void;
@@ -275,7 +273,6 @@ const initialState: LuminaState = {
   sidebarTab: 'workspace',
   aiPanelOpen: true,
   settingsOpen: false,
-  aboutTerminalOpen: false,
   settingsTab: 'general',
   newFileModalOpen: false,
   deleteModalOpen: false,
@@ -452,7 +449,6 @@ export const useLuminaStore = create<LuminaStore>((set) => ({
   setSidebarTab: (tab) => set({ sidebarTab: tab }),
   toggleAIPanel: () => set((s) => ({ aiPanelOpen: !s.aiPanelOpen })),
   setSettingsOpen: (open) => set({ settingsOpen: open, settingsTab: open ? 'general' : 'general' }),
-  setAboutTerminalOpen: (open) => set({ aboutTerminalOpen: open }),
   setSettingsTab: (tab) => set({ settingsTab: tab }),
   setNewFileModalOpen: (open) => set({ newFileModalOpen: open }),
   setDeleteModalOpen: (open, fileId) =>

@@ -94,22 +94,6 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes scanline {
-  0% { background-position: 0 0; }
-  100% { background-position: 0 4px; }
-}
-
-@keyframes crt-flicker {
-  0% { opacity: 0.97; }
-  50% { opacity: 1; }
-  100% { opacity: 0.97; }
-}
-
-@keyframes cursor-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
 /* ─── BASE STYLES ────────────────────────────────────────── */
 @layer base {
   * {
@@ -346,91 +330,4 @@
     background: #1a1a26;
     margin: 4px 0;
   }
-}
-
-/* ─── CRT OVERLAY (Scoped to .crt-overlay) ────────────── */
-/* Only applies inside the About Terminal overlay */
-
-.crt-overlay {
-  position: relative;
-  overflow: hidden;
-}
-
-/* Scanlines */
-.crt-overlay::before {
-  content: '';
-  display: block;
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
-  background:
-    linear-gradient(rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0.08) 50%),
-    linear-gradient(90deg, rgba(200, 240, 96, 0.015), rgba(0, 0, 0, 0.01), rgba(200, 240, 96, 0.015));
-  background-size: 100% 2px, 3px 100%;
-  z-index: 50;
-  pointer-events: none;
-}
-
-/* Vignette */
-.crt-overlay::after {
-  content: '';
-  display: block;
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
-  background: radial-gradient(circle, rgba(0,0,0,0) 55%, rgba(0,0,0,0.5) 100%);
-  z-index: 51;
-  pointer-events: none;
-}
-
-/* CRT flicker animation */
-.crt-flicker {
-  animation: crt-flicker 4s ease-in-out infinite;
-}
-
-/* Phosphor text glow */
-.crt-glow {
-  color: #c8f060;
-  text-shadow: 0 0 6px rgba(200, 240, 96, 0.5), 0 0 12px rgba(200, 240, 96, 0.15);
-}
-
-.crt-glow-bright {
-  color: #c8f060;
-  text-shadow: 0 0 8px rgba(200, 240, 96, 0.7), 0 0 16px rgba(200, 240, 96, 0.25);
-}
-
-/* CRT cursor block */
-.crt-cursor {
-  display: inline-block;
-  width: 9px;
-  height: 18px;
-  background-color: #c8f060;
-  animation: cursor-blink 1s step-end infinite;
-  vertical-align: text-bottom;
-  margin-left: 2px;
-}
-
-/* Logo stripe effect */
-.crt-logo {
-  font-family: 'IBM Plex Mono', 'Courier New', monospace;
-  font-weight: 700;
-  font-size: clamp(2.5rem, 8vw, 6rem);
-  letter-spacing: 0.2em;
-  background: repeating-linear-gradient(
-    to bottom,
-    #c8f060,
-    #c8f060 3px,
-    transparent 3px,
-    transparent 6px
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 0 10px rgba(200, 240, 96, 0.5));
-  text-transform: uppercase;
-  line-height: 1;
 }

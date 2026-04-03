@@ -7,7 +7,6 @@ import { Editor } from '@/components/lumina/editor';
 import { AIPanel } from '@/components/lumina/ai-panel';
 import { NewFileModal, DeleteConfirmModal, SettingsModal, RenameModal, ProjectModal } from '@/components/lumina/modals';
 import { FileContextMenu } from '@/components/lumina/sidebar';
-import { AboutTerminal } from '@/components/lumina/about-terminal';
 import { useLuminaStore } from '@/store/use-lumina-store';
 import { getAllFiles, getSettings, getAllSkills, getAllProjects, getPersona } from '@/lib/indexeddb';
 
@@ -143,9 +142,6 @@ export default function Home() {
 
       {/* ── Context Menu ── */}
       <FileContextMenu />
-
-      {/* ── About Terminal (easter egg) ── */}
-      <AboutTerminal />
     </div>
   );
 }
