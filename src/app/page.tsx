@@ -22,15 +22,29 @@ export default function Home() {
 
   // ── Load persisted data from IndexedDB on mount ──
   useEffect(() => {
+    let cancelled = false;
+
     async function loadData() {
+      // Safety timeout — never let the app get stuck on loading
+      const timeout = setTimeout(() => {
+        if (!cancelled) {
+          console.warn('[Lumina] IndexedDB load timed out, continuing without data');
+          setLoading(false);
+          setMounted(true);
+        }
+      }, 5000);
+
       try {
         const [files, settings, skills, projects, persona] = await Promise.all([
-          getAllFiles(),
-          getSettings(),
-          getAllSkills(),
-          getAllProjects(),
-          getPersona(),
+          getAllFiles().catch((e) => { console.warn('[Lumina] getAllFiles failed:', e); return []; }),
+          getSettings().catch((e) => { console.warn('[Lumina] getSettings failed:', e); return null; }),
+          getAllSkills().catch((e) => { console.warn('[Lumina] getAllSkills failed:', e); return []; }),
+          getAllProjects().catch((e) => { console.warn('[Lumina] getAllProjects failed:', e); return []; }),
+          getPersona().catch((e) => { console.warn('[Lumina] getPersona failed:', e); return null; }),
         ]);
+
+        clearTimeout(timeout);
+        if (cancelled) return;
 
         if (files.length > 0) {
           // Filter out closed files — workspace stays exactly as user left it
@@ -56,12 +70,16 @@ export default function Home() {
       } catch (err) {
         console.error('Failed to load data from IndexedDB:', err);
       } finally {
-        setLoading(false);
-        setMounted(true);
+        clearTimeout(timeout);
+        if (!cancelled) {
+          setLoading(false);
+          setMounted(true);
+        }
       }
     }
 
     loadData();
+    return () => { cancelled = true; };
   }, []);
 
   // ── Loading State ──

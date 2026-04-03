@@ -322,7 +322,7 @@ export function AboutTerminal() {
     <div
       className="fixed inset-0 z-[1000] bg-[#09090d] crt-overlay crt-flicker"
       style={{ transition: 'opacity 0.3s ease' }}
-      onClick={() => inputRef.current?.focus()}
+      onClick={() => { if (phase === 'terminal') inputRef.current?.focus(); }}
     >
       {/* ── Phase 1: SPLASH SCREEN ── */}
       {phase === 'splash' && (
@@ -398,9 +398,10 @@ export function AboutTerminal() {
       {phase === 'reader' && currentDoc && (
         <div className="absolute inset-0 flex flex-col z-20" style={{ animation: 'fadeIn 0.4s ease' }}>
           {/* Top bar */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(200,240,96,0.1)] shrink-0 z-[60]">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(200,240,96,0.1)] shrink-0 z-[60]" onClick={(e) => e.stopPropagation()}>
             <button
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 setReaderDoc(null);
                 setIsUserFile(false);
                 setPhase('terminal');
@@ -415,7 +416,7 @@ export function AboutTerminal() {
               {currentDoc.title}
             </span>
             <button
-              onClick={close}
+              onClick={(e) => { e.stopPropagation(); close(); }}
               className="p-1.5 text-[rgba(200,240,96,0.4)] hover:text-[#c8f060] transition-colors cursor-pointer"
             >
               <X size={14} />
@@ -432,9 +433,9 @@ export function AboutTerminal() {
 
           {/* Bottom bar — only for pre-loaded docs (not user files) */}
           {!isUserFile && (
-            <div className="flex items-center justify-center gap-4 px-4 py-3 border-t border-[rgba(200,240,96,0.1)] shrink-0 z-[60]">
+            <div className="flex items-center justify-center gap-4 px-4 py-3 border-t border-[rgba(200,240,96,0.1)] shrink-0 z-[60]" onClick={(e) => e.stopPropagation()}>
               <button
-                onClick={() => setReaderDocIndex((i) => Math.max(0, i - 1))}
+                onClick={(e) => { e.stopPropagation(); setReaderDocIndex((i) => Math.max(0, i - 1)); }}
                 disabled={readerDocIndex === 0}
                 className="flex items-center gap-1 px-3 py-1.5 text-[#c8f060] font-mono text-[10px] tracking-[0.06em] uppercase hover:bg-[rgba(200,240,96,0.08)] rounded-sm transition-colors cursor-pointer disabled:opacity-25 disabled:pointer-events-none"
               >
@@ -445,7 +446,7 @@ export function AboutTerminal() {
                 {readerDocIndex + 1} / {ABOUT_DOCS.length}
               </span>
               <button
-                onClick={() => setReaderDocIndex((i) => Math.min(ABOUT_DOCS.length - 1, i + 1))}
+                onClick={(e) => { e.stopPropagation(); setReaderDocIndex((i) => Math.min(ABOUT_DOCS.length - 1, i + 1)); }}
                 disabled={readerDocIndex === ABOUT_DOCS.length - 1}
                 className="flex items-center gap-1 px-3 py-1.5 text-[#c8f060] font-mono text-[10px] tracking-[0.06em] uppercase hover:bg-[rgba(200,240,96,0.08)] rounded-sm transition-colors cursor-pointer disabled:opacity-25 disabled:pointer-events-none"
               >
