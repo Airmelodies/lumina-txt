@@ -1,0 +1,436 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* ─── CUSTOM VARIANT ─────────────────────────────────────── */
+@custom-variant dark (&:is(.dark *));
+
+/* ─── TAILWIND THEME INLINE (OVERRIDDEN FOR TERMINAL DESIGN) ─── */
+@theme inline {
+  /* ── Surface Colors ── */
+  --color-surface-void: #050507;
+  --color-surface-panel: #09090d;
+  --color-surface-surface: #0d0d12;
+  --color-surface-raised: #111118;
+  --color-surface-hover: #16161f;
+
+  /* ── Border Colors ── */
+  --color-border-dim: #1a1a26;
+  --color-border-base: #22222f;
+  --color-border-lit: #2e2e3e;
+
+  /* ── Text Colors ── */
+  --color-text-mute: #3a3a50;
+  --color-text-dim: #55556a;
+  --color-text-mid: #7a7a96;
+  --color-text-base: #b8b8cc;
+  --color-text-bright: #e8e8f0;
+  --color-text-white: #f4f4f8;
+
+  /* ── Accent Colors ── */
+  --color-accent-primary: #c8f060;
+  --color-accent-dim: #7a9238;
+
+  /* ── Status Colors ── */
+  --color-status-warning: #f5a623;
+  --color-status-warning-dim: #7a5110;
+  --color-status-error: #e05050;
+
+  /* ── Font Families ── */
+  --font-mono: var(--font-ibm-plex-mono), 'IBM Plex Mono', 'Courier New', monospace;
+  --font-sans: var(--font-ibm-plex-sans), 'IBM Plex Sans', 'Segoe UI', sans-serif;
+
+  /* ── Border Radius ── */
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+
+  /* ── Letter Spacing ── */
+  --tracking-tightest: 0.03em;
+  --tracking-tight: 0.06em;
+  --tracking-wide: 0.10em;
+  --tracking-widest: 0.12em;
+
+  /* ── Animation ── */
+  --animate-ledpulse: ledpulse 3s ease-in-out infinite;
+
+  /* ── For shadcn compatibility ── */
+  --color-background: var(--surface-void);
+  --color-foreground: var(--text-base);
+  --color-card: var(--surface-raised);
+  --color-card-foreground: var(--text-base);
+  --color-popover: var(--surface-raised);
+  --color-popover-foreground: var(--text-base);
+  --color-primary: var(--accent-primary);
+  --color-primary-foreground: var(--surface-void);
+  --color-secondary: var(--surface-surface);
+  --color-secondary-foreground: var(--text-base);
+  --color-muted: var(--surface-raised);
+  --color-muted-foreground: var(--text-dim);
+  --color-accent: var(--accent-primary);
+  --color-accent-foreground: var(--surface-void);
+  --color-destructive: var(--status-error);
+  --color-border: var(--border-base);
+  --color-input: var(--border-base);
+  --color-ring: var(--border-lit);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+}
+
+/* ─── KEYFRAMES ──────────────────────────────────────────── */
+@keyframes ledpulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scanline {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 4px; }
+}
+
+@keyframes crt-flicker {
+  0% { opacity: 0.97; }
+  50% { opacity: 1; }
+  100% { opacity: 0.97; }
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* ─── BASE STYLES ────────────────────────────────────────── */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  body {
+    background-color: #050507;
+    color: #b8b8cc;
+    font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+    font-size: 11px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Optional scanline texture — performance-conscious */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    background-image: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 255, 255, 0.006) 2px,
+      rgba(255, 255, 255, 0.006) 4px
+    );
+    opacity: 0.4;
+  }
+
+  /* ── Custom Scrollbar ── */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #2e2e3e;
+    border-radius: 0;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3a3a50;
+  }
+
+  /* Firefox scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #2e2e3e transparent;
+  }
+
+  /* Selection color */
+  ::selection {
+    background: rgba(200, 240, 96, 0.2);
+    color: #e8e8f0;
+  }
+
+  /* Focus outline override */
+  :focus-visible {
+    outline: 1px solid #2e2e3e;
+    outline-offset: 1px;
+  }
+}
+
+/* ─── UTILITY CLASSES ────────────────────────────────────── */
+@layer utilities {
+  /* Terminal label — used for section headings */
+  .terminal-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #3a3a50;
+  }
+
+  /* Track separator */
+  .track {
+    border: 1px solid #22222f;
+  }
+
+  .track-lit {
+    border: 1px solid #2e2e3e;
+  }
+
+  /* Accent glow backgrounds */
+  .accent-glow {
+    background: rgba(200, 240, 96, 0.08);
+  }
+
+  .accent-glow-strong {
+    background: rgba(200, 240, 96, 0.15);
+  }
+
+  /* File chip style */
+  .file-chip {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 1px 5px;
+    border: 1px solid #22222f;
+    color: #55556a;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+    text-transform: uppercase;
+  }
+
+  /* Status LED */
+  .status-led {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #c8f060;
+    box-shadow: 0 0 6px #c8f060;
+    animation: ledpulse 3s ease-in-out infinite;
+  }
+
+  /* Tag badge */
+  .tag-badge {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 2px 6px;
+    border: 1px solid #22222f;
+    color: #55556a;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: #09090d;
+  }
+
+  /* Editor caret */
+  .editor-caret {
+    caret-color: #c8f060;
+  }
+
+  /* Active line highlight */
+  .active-line {
+    background: rgba(255, 255, 255, 0.025);
+  }
+
+  /* Content line styles for editor */
+  .line-comment {
+    color: #3a3a50;
+    font-style: italic;
+  }
+
+  .line-heading {
+    color: #e8e8f0;
+    font-weight: 500;
+  }
+
+  .line-bullet .bullet-marker {
+    color: #c8f060;
+  }
+
+  .line-keyword {
+    color: #f5a623;
+  }
+
+  .line-secondary {
+    color: #7a7a96;
+  }
+
+  /* Animation utilities */
+  .animate-fade-in {
+    animation: fadeIn 0.15s ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.2s ease-out;
+  }
+}
+
+/* ─── COMPONENT OVERRIDES (shadcn/ui → Terminal Theme) ───── */
+@layer components {
+  /* Dialog override */
+  [data-radix-popper-content-wrapper] {
+    z-index: 999 !important;
+  }
+
+  /* Tooltip override */
+  [data-radix-tooltip-content] {
+    z-index: 1000 !important;
+  }
+
+  /* Context menu override */
+  [data-radix-context-menu-content] {
+    background: #111118;
+    border: 1px solid #2e2e3e;
+    border-radius: 3px;
+    padding: 4px;
+    min-width: 160px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+
+  [data-radix-context-menu-item] {
+    color: #b8b8cc;
+    padding: 6px 10px;
+    border-radius: 2px;
+    cursor: pointer;
+    outline: none;
+    transition: background 0.1s, color 0.1s;
+  }
+
+  [data-radix-context-menu-item]:hover,
+  [data-radix-context-menu-item][data-highlighted] {
+    background: #16161f;
+    color: #e8e8f0;
+  }
+
+  [data-radix-context-menu-item][data-destructive] {
+    color: #e05050;
+  }
+
+  [data-radix-context-menu-item][data-destructive]:hover {
+    background: rgba(224, 80, 80, 0.12);
+  }
+
+  [data-radix-context-menu-separator] {
+    height: 1px;
+    background: #1a1a26;
+    margin: 4px 0;
+  }
+}
+
+/* ─── CRT OVERLAY (Scoped to .crt-overlay) ────────────── */
+/* Only applies inside the About Terminal overlay */
+
+.crt-overlay {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Scanlines */
+.crt-overlay::before {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background:
+    linear-gradient(rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0.08) 50%),
+    linear-gradient(90deg, rgba(200, 240, 96, 0.015), rgba(0, 0, 0, 0.01), rgba(200, 240, 96, 0.015));
+  background-size: 100% 2px, 3px 100%;
+  z-index: 50;
+  pointer-events: none;
+}
+
+/* Vignette */
+.crt-overlay::after {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: radial-gradient(circle, rgba(0,0,0,0) 55%, rgba(0,0,0,0.5) 100%);
+  z-index: 51;
+  pointer-events: none;
+}
+
+/* CRT flicker animation */
+.crt-flicker {
+  animation: crt-flicker 4s ease-in-out infinite;
+}
+
+/* Phosphor text glow */
+.crt-glow {
+  color: #c8f060;
+  text-shadow: 0 0 6px rgba(200, 240, 96, 0.5), 0 0 12px rgba(200, 240, 96, 0.15);
+}
+
+.crt-glow-bright {
+  color: #c8f060;
+  text-shadow: 0 0 8px rgba(200, 240, 96, 0.7), 0 0 16px rgba(200, 240, 96, 0.25);
+}
+
+/* CRT cursor block */
+.crt-cursor {
+  display: inline-block;
+  width: 9px;
+  height: 18px;
+  background-color: #c8f060;
+  animation: cursor-blink 1s step-end infinite;
+  vertical-align: text-bottom;
+  margin-left: 2px;
+}
+
+/* Logo stripe effect */
+.crt-logo {
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  font-weight: 700;
+  font-size: clamp(2.5rem, 8vw, 6rem);
+  letter-spacing: 0.2em;
+  background: repeating-linear-gradient(
+    to bottom,
+    #c8f060,
+    #c8f060 3px,
+    transparent 3px,
+    transparent 6px
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 10px rgba(200, 240, 96, 0.5));
+  text-transform: uppercase;
+  line-height: 1;
+}

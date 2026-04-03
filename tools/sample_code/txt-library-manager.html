@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>TXT Library Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ── DESIGN TOKENS ─────────────────────────────────────── */
+    :root {
+      --bg-void:      #050507;
+      --bg-panel:     #09090d;
+      --bg-surface:   #0d0d12;
+      --bg-raised:    #111118;
+      --bg-hover:     #16161f;
+
+      --border-dim:   #1a1a26;
+      --border-base:  #22222f;
+      --border-lit:   #2e2e3e;
+
+      --text-mute:    #3a3a50;
+      --text-dim:     #55556a;
+      --text-mid:     #7a7a96;
+      --text-base:    #b8b8cc;
+      --text-bright:  #e8e8f0;
+      --text-white:   #f4f4f8;
+
+      --accent:       #c8f060;   /* phosphor green — hardware readout */
+      --accent-dim:   #7a9238;
+      --accent-glow:  rgba(200,240,96,.08);
+      --accent-glow-strong: rgba(200,240,96,.15);
+
+      --amber:        #f5a623;   /* secondary: active states */
+      --amber-dim:    #7a5110;
+
+      --red:          #e05050;
+      --red-dim:      rgba(224,80,80,.12);
+
+      --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+      --font-sans: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+
+      --r-sm:  2px;
+      --r-md:  3px;
+      --r-lg:  4px;
+
+      --track: 1px solid var(--border-base);
+      --track-lit: 1px solid var(--border-lit);
+    }
+
+    /* ── RESET ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-void);
+      color: var(--text-base);
+      font-family: var(--font-sans);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      font-size: 13px;
+      /* Subtle scanline texture */
+      background-image: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(255,255,255,.008) 2px,
+        rgba(255,255,255,.008) 4px
+      );
+    }
+
+    /* ── SCROLLBAR ─────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-lit); border-radius: 0; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-mute); }
+
+    /* ── TOPBAR ────────────────────────────────────────────── */
+    .topbar {
+      height: 36px;
+      border-bottom: var(--track);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      background: var(--bg-panel);
+      flex-shrink: 0;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .app-id {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .app-divider {
+      width: 1px;
+      height: 14px;
+      background: var(--border-base);
+    }
+
+    .app-name {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--text-mid);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-led {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--accent);
+      animation: ledpulse 3s ease-in-out infinite;
+    }
+
+    @keyframes ledpulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .5; }
+    }
+
+    .status-txt {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .tag {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      padding: 2px 6px;
+      border: 1px solid var(--border-base);
+      color: var(--text-dim);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      background: var(--bg-panel);
+    }
+
+    /* ── MAIN LAYOUT ───────────────────────────────────────── */
+    .layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 220px 1fr 264px;
+      min-height: 0;
+    }
+
+    /* ── SIDEBAR ───────────────────────────────────────────── */
+    .sidebar {
+      border-right: var(--track);
+      background: var(--bg-panel);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-section {
+      padding: 10px 12px;
+      border-bottom: var(--track);
+    }
+
+    .label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--text-mute);
+      margin-bottom: 6px;
+    }
+
+    .folder-btn {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px dashed var(--border-lit);
+      background: transparent;
+      color: var(--text-mid);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: .04em;
+      cursor: pointer;
+      text-align: left;
+      transition: border-color .15s, color .15s, background .15s;
+    }
+
+    .folder-btn:hover {
+      border-color: var(--accent-dim);
+      color: var(--accent);
+      background: var(--accent-glow);
+    }
+
+    .new-btn {
+      width: 100%;
+      padding: 7px 10px;
+      border: var(--track-lit);
+      background: var(--bg-raised);
+      color: var(--text-base);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: .04em;
+      cursor: pointer;
+      text-align: left;
+      margin-top: 6px;
+      transition: background .15s, border-color .15s, color .15s;
+    }
+
+    .new-btn:hover {
+      background: var(--bg-hover);
+      border-color: var(--text-mute);
+      color: var(--text-bright);
+    }
+
+    .search-wrap {
+      position: relative;
+      margin-top: 8px;
+    }
+
+    .search-glyph {
+      position: absolute;
+      left: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 10px;
+      color: var(--text-mute);
+      pointer-events: none;
+    }
+
+    .search-box {
+      width: 100%;
+      padding: 6px 8px 6px 26px;
+      border: var(--track);
+      background: var(--bg-surface);
+      color: var(--text-base);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      outline: none;
+      transition: border-color .15s;
+    }
+
+    .search-box::placeholder { color: var(--text-mute); }
+    .search-box:focus { border-color: var(--border-lit); }
+
+    .file-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 0;
+    }
+
+    .file-group-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      color: var(--text-mute);
+      padding: 8px 12px 4px;
+    }
+
+    .file-item {
+      padding: 7px 12px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-left: 2px solid transparent;
+      transition: background .1s, border-color .1s;
+    }
+
+    .file-item:hover {
+      background: var(--bg-raised);
+    }
+
+    .file-item.active {
+      background: var(--bg-raised);
+      border-left-color: var(--accent);
+    }
+
+    .file-item-name {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-base);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 130px;
+    }
+
+    .file-item.active .file-item-name {
+      color: var(--text-bright);
+    }
+
+    .file-item-sub {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--text-mute);
+      margin-top: 2px;
+    }
+
+    .file-chip {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      padding: 1px 5px;
+      border: 1px solid var(--border-base);
+      color: var(--text-dim);
+      letter-spacing: .04em;
+      flex-shrink: 0;
+    }
+
+    /* ── MAIN EDITOR ───────────────────────────────────────── */
+    .main {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-void);
+      overflow: hidden;
+    }
+
+    .editor-topbar {
+      height: 36px;
+      border-bottom: var(--track);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      flex-shrink: 0;
+      background: var(--bg-panel);
+    }
+
+    .breadcrumb {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: .03em;
+    }
+
+    .breadcrumb .crumb-active {
+      color: var(--text-mid);
+    }
+
+    .editor-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .act-btn {
+      padding: 4px 10px;
+      border: var(--track);
+      background: transparent;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: .04em;
+      cursor: pointer;
+      transition: all .12s;
+    }
+
+    .act-btn:hover {
+      border-color: var(--border-lit);
+      color: var(--text-base);
+      background: var(--bg-raised);
+    }
+
+    .act-btn.primary {
+      border-color: var(--accent-dim);
+      color: var(--accent);
+      background: var(--accent-glow);
+    }
+
+    .act-btn.primary:hover {
+      background: var(--accent-glow-strong);
+      border-color: var(--accent);
+    }
+
+    /* Document header */
+    .doc-header {
+      padding: 14px 16px 10px;
+      border-bottom: var(--track);
+      flex-shrink: 0;
+    }
+
+    .doc-filename {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-bright);
+      letter-spacing: .01em;
+    }
+
+    .doc-meta-row {
+      display: flex;
+      gap: 16px;
+      margin-top: 4px;
+    }
+
+    .doc-meta-item {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--text-mute);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .doc-meta-item strong {
+      color: var(--text-dim);
+      font-weight: 400;
+    }
+
+    /* Toolbar */
+    .toolbar {
+      padding: 6px 16px;
+      border-bottom: var(--track);
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+      background: var(--bg-panel);
+    }
+
+    .tb-btn {
+      padding: 3px 8px;
+      background: transparent;
+      border: none;
+      color: var(--text-mute);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: .03em;
+      cursor: pointer;
+      transition: color .12s, background .12s;
+      border-radius: var(--r-sm);
+    }
+
+    .tb-btn:hover {
+      color: var(--text-mid);
+      background: var(--bg-raised);
+    }
+
+    .tb-sep {
+      width: 1px;
+      height: 14px;
+      background: var(--border-dim);
+      margin: 0 4px;
+    }
+
+    /* Editor area */
+    .editor-area {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .editor-content {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.8;
+      color: var(--text-base);
+      white-space: pre-wrap;
+      outline: none;
+      caret-color: var(--accent);
+      min-height: 100%;
+    }
+
+    /* Syntax/content highlights */
+    .editor-content .hl-comment { color: var(--text-mute); font-style: italic; }
+    .editor-content .hl-bullet { color: var(--accent); }
+    .editor-content .hl-keyword { color: var(--amber); }
+
+    /* Line numbers */
+    .editor-gutter {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 36px;
+      padding-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      border-right: var(--track);
+      background: var(--bg-panel);
+    }
+
+    .gutter-num {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-mute);
+      line-height: 1.8;
+      text-align: right;
+      padding-right: 6px;
+    }
+
+    .editor-body {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .editor-body-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 16px 16px 52px;
+    }
+
+    /* Status bar */
+    .statusbar {
+      height: 22px;
+      border-top: var(--track);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      flex-shrink: 0;
+      background: var(--bg-panel);
+    }
+
+    .statusbar-item {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--text-mute);
+      letter-spacing: .06em;
+    }
+
+    /* ── AI PANEL ──────────────────────────────────────────── */
+    .ai-panel {
+      border-left: var(--track);
+      background: var(--bg-panel);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .ai-topbar {
+      height: 36px;
+      border-bottom: var(--track);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      flex-shrink: 0;
+    }
+
+    .ai-title {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .model-badge {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      padding: 2px 6px;
+      border: 1px solid var(--border-base);
+      color: var(--accent-dim);
+      letter-spacing: .04em;
+      background: var(--accent-glow);
+    }
+
+    /* Mode selector — hardware button bank style */
+    .mode-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border-dim);
+      border-bottom: var(--track);
+      flex-shrink: 0;
+    }
+
+    .mode-btn {
+      padding: 7px 10px;
+      background: var(--bg-panel);
+      border: none;
+      color: var(--text-mute);
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background .1s, color .1s;
+      text-align: left;
+      position: relative;
+    }
+
+    .mode-btn::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 0;
+      background: var(--accent);
+      transition: width .1s;
+    }
+
+    .mode-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-mid);
+    }
+
+    .mode-btn.active {
+      background: var(--bg-raised);
+      color: var(--accent);
+    }
+
+    .mode-btn.active::before {
+      width: 2px;
+    }
+
+    /* AI output */
+    .ai-output {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-base);
+      line-height: 1.7;
+    }
+
+    .ai-output-header {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      color: var(--accent-dim);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ai-output-header::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border-dim);
+    }
+
+    .ai-output-text {
+      color: var(--text-mid);
+      font-size: 11px;
+      line-height: 1.7;
+    }
+
+    /* Input zone */
+    .ai-input-zone {
+      border-top: var(--track);
+      flex-shrink: 0;
+      padding: 10px 12px;
+      background: var(--bg-surface);
+    }
+
+    .ai-prompt-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      color: var(--text-mute);
+      margin-bottom: 5px;
+    }
+
+    .ai-input {
+      width: 100%;
+      padding: 7px 8px;
+      border: var(--track);
+      background: var(--bg-panel);
+      color: var(--text-base);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      line-height: 1.5;
+      resize: none;
+      min-height: 56px;
+      outline: none;
+      transition: border-color .15s;
+    }
+
+    .ai-input::placeholder { color: var(--text-mute); }
+    .ai-input:focus { border-color: var(--border-lit); }
+
+    .ai-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 6px;
+    }
+
+    .ai-footer-note {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--text-mute);
+    }
+
+    .send-btn {
+      padding: 5px 12px;
+      border: 1px solid var(--accent-dim);
+      background: var(--accent-glow);
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all .12s;
+    }
+
+    .send-btn:hover {
+      background: var(--accent-glow-strong);
+      border-color: var(--accent);
+      box-shadow: 0 0 8px var(--accent-glow-strong);
+    }
+
+    /* ── MODAL ─────────────────────────────────────────────── */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.72);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      backdrop-filter: blur(2px);
+    }
+
+    .modal {
+      width: 340px;
+      background: var(--bg-raised);
+      border: var(--track-lit);
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .modal-titlebar {
+      background: var(--bg-panel);
+      border-bottom: var(--track);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      color: var(--text-base);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      cursor: pointer;
+      padding: 0 2px;
+      transition: color .12s;
+    }
+
+    .modal-close:hover { color: var(--text-bright); }
+
+    .modal-body {
+      padding: 16px 14px;
+    }
+
+    .modal-input-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      color: var(--text-mute);
+      margin-bottom: 5px;
+    }
+
+    .modal-input {
+      width: 100%;
+      padding: 7px 8px;
+      border: var(--track);
+      background: var(--bg-surface);
+      color: var(--text-bright);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      outline: none;
+      transition: border-color .15s;
+    }
+
+    .modal-input::placeholder { color: var(--text-mute); }
+    .modal-input:focus { border-color: var(--border-lit); }
+
+    .modal-foot {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+      padding: 10px 14px;
+      border-top: var(--track);
+      background: var(--bg-panel);
+    }
+
+    .modal-btn {
+      padding: 5px 12px;
+      border: var(--track);
+      background: transparent;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all .12s;
+    }
+
+    .modal-btn:hover {
+      border-color: var(--border-lit);
+      color: var(--text-base);
+    }
+
+    .modal-btn.confirm {
+      border-color: var(--accent-dim);
+      color: var(--accent);
+      background: var(--accent-glow);
+    }
+
+    .modal-btn.confirm:hover {
+      background: var(--accent-glow-strong);
+      border-color: var(--accent);
+    }
+
+    /* ── EDITOR BODY LAYOUT ────────────────────────────────── */
+    .editor-main-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .editor-scroll-zone {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    .line-numbers {
+      width: 36px;
+      flex-shrink: 0;
+      background: var(--bg-panel);
+      border-right: var(--track);
+      padding-top: 14px;
+      overflow: hidden;
+    }
+
+    .line-num {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-mute);
+      line-height: 21.6px; /* matches content line-height */
+      text-align: right;
+      padding-right: 8px;
+      display: block;
+    }
+
+    .line-num.active { color: var(--accent-dim); }
+
+    .editor-text-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 14px 14px 14px;
+    }
+
+    .content-line {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-base);
+      line-height: 21.6px;
+      white-space: pre;
+    }
+
+    .content-line.line-comment { color: var(--text-mute); }
+    .content-line.line-heading { color: var(--text-bright); font-weight: 500; }
+    .content-line.line-bullet .bullet-marker { color: var(--accent); }
+    .content-line.line-sub-bullet .bullet-marker { color: var(--text-dim); }
+    .content-line .kw { color: var(--amber); }
+    .content-line .kw-secondary { color: var(--text-mid); }
+
+    /* Cursor line highlight */
+    .content-line.active-line {
+      background: rgba(255,255,255,.025);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="app-id">TLM</span>
+      <div class="app-divider"></div>
+      <span class="app-name">Text Library Manager</span>
+    </div>
+    <div class="topbar-right">
+      <div class="status-led"></div>
+      <span class="status-txt">Local · Offline</span>
+      <div class="app-divider" style="height:10px;margin:0 4px;"></div>
+      <span class="tag">LLM-ready</span>
+      <span class="tag">v0.1</span>
+    </div>
+  </header>
+
+  <!-- THREE-PANEL LAYOUT -->
+  <div class="layout">
+
+    <!-- ── SIDEBAR ────────────────────────── -->
+    <aside class="sidebar">
+
+      <div class="sidebar-section">
+        <div class="label">Workspace</div>
+        <button class="folder-btn">+ Choose folder of .txt files</button>
+        <button class="new-btn" id="openModal">+ New text file</button>
+      </div>
+
+      <div class="sidebar-section" style="border-bottom: none;">
+        <div class="label">Search</div>
+        <div class="search-wrap">
+          <span class="search-glyph">⌕</span>
+          <input class="search-box" placeholder="Filter files…" />
+        </div>
+      </div>
+
+      <div class="file-list">
+        <div class="file-group-label">Recents</div>
+
+        <div class="file-item active">
+          <div>
+            <div class="file-item-name">AI &amp; DEV TERMS SKILL.txt</div>
+            <div class="file-item-sub">2h ago · 3.2 KB</div>
+          </div>
+          <span class="file-chip">notes</span>
+        </div>
+
+        <div class="file-item">
+          <div>
+            <div class="file-item-name">MATH APP IDEA.txt</div>
+            <div class="file-item-sub">yesterday · 1.1 KB</div>
+          </div>
+          <span class="file-chip">idea</span>
+        </div>
+
+        <div class="file-item">
+          <div>
+            <div class="file-item-name">Prompt Engineering Guide.txt</div>
+            <div class="file-item-sub">3 days ago · 5.4 KB</div>
+          </div>
+          <span class="file-chip">guide</span>
+        </div>
+
+        <div class="file-group-label" style="margin-top:8px;">Library</div>
+
+        <div class="file-item">
+          <div>
+            <div class="file-item-name">RAG Architecture Notes.txt</div>
+            <div class="file-item-sub">last week · 8.0 KB</div>
+          </div>
+          <span class="file-chip">arch</span>
+        </div>
+
+        <div class="file-item">
+          <div>
+            <div class="file-item-name">Todo — project X.txt</div>
+            <div class="file-item-sub">last week · 0.6 KB</div>
+          </div>
+          <span class="file-chip">todo</span>
+        </div>
+
+        <div class="file-item">
+          <div>
+            <div class="file-item-name">Shell Scripting Ref.txt</div>
+            <div class="file-item-sub">2 weeks ago · 4.1 KB</div>
+          </div>
+          <span class="file-chip">ref</span>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- ── MAIN EDITOR ──────────────────── -->
+    <main class="main">
+
+      <!-- Editor topbar -->
+      <div class="editor-topbar">
+        <div class="breadcrumb">
+          Library&nbsp;/&nbsp;<span class="crumb-active">AI &amp; DEV TERMS SKILL.txt</span>
+        </div>
+        <div class="editor-actions">
+          <button class="act-btn">Revert</button>
+          <button class="act-btn">Save</button>
+          <button class="act-btn primary">⚡ AI Assist</button>
+        </div>
+      </div>
+
+      <!-- Doc info -->
+      <div class="doc-header">
+        <div class="doc-filename">AI &amp; DEV TERMS SKILL.txt</div>
+        <div class="doc-meta-row">
+          <span class="doc-meta-item">Format <strong>UTF-8 · .txt</strong></span>
+          <span class="doc-meta-item">Size <strong>3.2 KB</strong></span>
+          <span class="doc-meta-item">Lines <strong>14</strong></span>
+          <span class="doc-meta-item">Modified <strong>2h ago</strong></span>
+        </div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <button class="tb-btn">H1</button>
+        <button class="tb-btn">H2</button>
+        <div class="tb-sep"></div>
+        <button class="tb-btn">B</button>
+        <button class="tb-btn"><em>I</em></button>
+        <div class="tb-sep"></div>
+        <button class="tb-btn">— list</button>
+        <button class="tb-btn">{ code }</button>
+        <div class="tb-sep"></div>
+        <button class="tb-btn">Find</button>
+        <button class="tb-btn">Wrap</button>
+      </div>
+
+      <!-- Editor body: line numbers + content -->
+      <div class="editor-main-body">
+        <div class="editor-scroll-zone">
+
+          <div class="line-numbers" id="lineNums">
+            <span class="line-num">1</span>
+            <span class="line-num">2</span>
+            <span class="line-num active">3</span>
+            <span class="line-num">4</span>
+            <span class="line-num">5</span>
+            <span class="line-num">6</span>
+            <span class="line-num">7</span>
+            <span class="line-num">8</span>
+            <span class="line-num">9</span>
+            <span class="line-num">10</span>
+            <span class="line-num">11</span>
+            <span class="line-num">12</span>
+          </div>
+
+          <div class="editor-text-area">
+            <div class="content-line line-comment">
+# Analogy: Building a house with code tools
+            </div>
+            <div class="content-line">&nbsp;</div>
+            <div class="content-line line-heading active-line">Think of it this way — to build a house:</div>
+            <div class="content-line">&nbsp;</div>
+            <div class="content-line line-bullet">
+<span class="bullet-marker">—</span> <span class="kw">Python</span> or <span class="kw">JavaScript</span>  = The raw building materials.
+            </div>
+            <div class="content-line line-bullet">
+<span class="bullet-marker">—</span> <span class="kw">LangChain</span>         = A specialized pre-fab kit.
+            </div>
+            <div class="content-line line-bullet">
+<span class="bullet-marker">—</span> <span class="kw">Node.js</span>           = A powerful tool designed for JS.
+            </div>
+            <div class="content-line line-bullet">
+<span class="bullet-marker">—</span> <span class="kw">Shell</span>             = The construction site.
+            </div>
+            <div class="content-line">&nbsp;</div>
+            <div class="content-line line-comment">
+# Each plays a different role in the stack.
+            </div>
+            <div class="content-line">&nbsp;</div>
+            <div class="content-line">
+<span class="kw-secondary">Note:</span> LangChain abstracts model calls, chains, and tool use.
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Status bar -->
+        <div class="statusbar">
+          <div style="display:flex;gap:14px;">
+            <span class="statusbar-item">Ln 3, Col 1</span>
+            <span class="statusbar-item">No selection</span>
+          </div>
+          <div style="display:flex;gap:14px;">
+            <span class="statusbar-item">Spaces: 2</span>
+            <span class="statusbar-item">UTF-8</span>
+            <span class="statusbar-item">LF</span>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- ── AI PANEL ─────────────────────── -->
+    <aside class="ai-panel">
+
+      <div class="ai-topbar">
+        <span class="ai-title">AI Analysis</span>
+        <span class="model-badge">Qwen2.5 · Ollama</span>
+      </div>
+
+      <!-- Mode grid: hardware button-bank style -->
+      <div class="mode-grid">
+        <button class="mode-btn active">Summarize</button>
+        <button class="mode-btn">Tag</button>
+        <button class="mode-btn">Rewrite</button>
+        <button class="mode-btn">Extract tasks</button>
+        <button class="mode-btn">Search lib</button>
+        <button class="mode-btn">Chat w/ file</button>
+      </div>
+
+      <!-- Output -->
+      <div class="ai-output">
+        <div class="ai-output-header">Output</div>
+        <div class="ai-output-text">
+          This note explains how Python, JavaScript, LangChain, Node.js, and the Shell each serve distinct roles in a development workflow — using a house-building analogy as the mental model.<br><br>
+          <span style="color:var(--text-mute);">—</span> <strong style="color:var(--text-base);font-weight:500;">Core idea:</strong> each tool is a layer of abstraction over the one beneath it.<br><br>
+          <span style="color:var(--text-mute);">—</span> <strong style="color:var(--text-base);font-weight:500;">Implication:</strong> LangChain and Node.js both assume foundational language knowledge first.
+        </div>
+      </div>
+
+      <!-- Input -->
+      <div class="ai-input-zone">
+        <div class="ai-prompt-label">Prompt</div>
+        <textarea class="ai-input" placeholder="Ask the local model about this file…" rows="3"></textarea>
+        <div class="ai-footer">
+          <span class="ai-footer-note">⏎ send · ⎋ clear</span>
+          <button class="send-btn">Run →</button>
+        </div>
+      </div>
+
+    </aside>
+
+  </div><!-- /.layout -->
+
+  <!-- MODAL -->
+  <div class="modal-backdrop" id="newFileModal">
+    <div class="modal">
+      <div class="modal-titlebar">
+        <span class="modal-title">New Text File</span>
+        <button class="modal-close" id="closeModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-input-label">Filename</div>
+        <input class="modal-input" placeholder="e.g. project-notes.txt" />
+      </div>
+      <div class="modal-foot">
+        <button class="modal-btn" id="cancelModal">Cancel</button>
+        <button class="modal-btn confirm">Create file</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Modal
+    const modal = document.getElementById('newFileModal');
+    const openBtn = document.getElementById('openModal');
+    const closeBtn = document.getElementById('closeModal');
+    const cancelBtn = document.getElementById('cancelModal');
+
+    const openModal = () => modal.style.display = 'flex';
+    const closeModal = () => modal.style.display = 'none';
+
+    openBtn.onclick = openModal;
+    closeBtn.onclick = closeModal;
+    cancelBtn.onclick = closeModal;
+    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+    // Mode buttons
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+
+    // File items
+    document.querySelectorAll('.file-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.file-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+      });
+    });
+
+    // Toolbar buttons
+    document.querySelectorAll('.tb-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.style.color = 'var(--accent)';
+        setTimeout(() => btn.style.color = '', 200);
+      });
+    });
+  </script>
+
+</body>
+</html>

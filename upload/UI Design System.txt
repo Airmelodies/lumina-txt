@@ -1,0 +1,494 @@
+
+### **Section A: Design System JSON (Style Dictionary Format)**
+
+```json
+{
+  "color": {
+    "surface": {
+      "void": { "value": "#050507", "comment": "Deepest background, main canvas" },
+      "panel": { "value": "#09090d", "comment": "Sidebar, topbar, modal backgrounds" },
+      "surface": { "value": "#0d0d12", "comment": "Input fields, raised surfaces" },
+      "raised": { "value": "#111118", "comment": "Active states, selected items" },
+      "hover": { "value": "#16161f", "comment": "Hover states for interactive elements" }
+    },
+    "border": {
+      "dim": { "value": "#1a1a26", "comment": "Subtle separators" },
+      "base": { "value": "#22222f", "comment": "Default borders, tracks" },
+      "lit": { "value": "#2e2e3e", "comment": "Focus states, active borders" }
+    },
+    "text": {
+      "mute": { "value": "#3a3a50", "comment": "Disabled, placeholders" },
+      "dim": { "value": "#55556a", "comment": "Metadata, secondary labels" },
+      "mid": { "value": "#7a7a96", "comment": "Body text on dark surfaces" },
+      "base": { "value": "#b8b8cc", "comment": "Primary content text" },
+      "bright": { "value": "#e8e8f0", "comment": "Headings, active content" },
+      "white": { "value": "#f4f4f8", "comment": "Maximum contrast text" }
+    },
+    "accent": {
+      "primary": { "value": "#c8f060", "comment": "Phosphor green: primary actions, focus" },
+      "dim": { "value": "#7a9238", "comment": "De-emphasized accent for borders" },
+      "glow": { "value": "rgba(200,240,96,0.08)", "comment": "Subtle background glow" },
+      "glowStrong": { "value": "rgba(200,240,96,0.15)", "comment": "Hover/active glow" }
+    },
+    "status": {
+      "warning": { "value": "#f5a623", "comment": "Amber: warnings, secondary actions" },
+      "warningDim": { "value": "#7a5110", "comment": "De-emphasized warning" },
+      "error": { "value": "#e05050", "comment": "Errors, destructive actions" },
+      "errorDim": { "value": "rgba(224,80,80,0.12)", "comment": "Error background tint" }
+    }
+  },
+  "typography": {
+    "fontFamily": {
+      "mono": { "value": "'IBM Plex Mono', 'Courier New', monospace", "comment": "Code, data, labels" },
+      "sans": { "value": "'IBM Plex Sans', 'Segoe UI', sans-serif", "comment": "UI chrome, headings" }
+    },
+    "fontSize": {
+      "xs": { "value": "9px", "comment": "Chips, badges, micro-labels" },
+      "sm": { "value": "10px", "comment": "UI controls, metadata" },
+      "base": { "value": "11px", "comment": "Default UI text" },
+      "body": { "value": "12px", "comment": "Editor content, readable text" },
+      "lg": { "value": "14px", "comment": "Headings, emphasized content" }
+    },
+    "lineHeight": {
+      "tight": { "value": "1.5", "comment": "UI controls" },
+      "body": { "value": "1.8", "comment": "Editor content readability" }
+    },
+    "fontWeight": {
+      "normal": { "value": "400" },
+      "medium": { "value": "500" },
+      "semibold": { "value": "600" }
+    },
+    "letterSpacing": {
+      "tight": { "value": "0.03em" },
+      "wide": { "value": "0.06em" },
+      "wider": { "value": "0.10em" },
+      "widest": { "value": "0.12em", "comment": "Uppercase labels, app ID" }
+    }
+  },
+  "spacing": {
+    "unit": { "value": "4px" },
+    "xs": { "value": "4px" },
+    "sm": { "value": "8px" },
+    "md": { "value": "12px" },
+    "lg": { "value": "16px" },
+    "xl": { "value": "24px" }
+  },
+  "borderRadius": {
+    "sm": { "value": "2px", "comment": "Buttons, inputs" },
+    "md": { "value": "3px", "comment": "Cards, modals" },
+    "lg": { "value": "4px", "comment": "Maximum rounding per aesthetic" }
+  },
+  "border": {
+    "track": { "value": "1px solid #22222f", "comment": "Default separator" },
+    "trackLit": { "value": "1px solid #2e2e3e", "comment": "Active/focus separator" }
+  },
+  "size": {
+    "topbar": { "value": "36px" },
+    "sidebar": { "value": "220px" },
+    "aiPanel": { "value": "264px" }
+  },
+  "zIndex": {
+    "modal": { "value": "999" },
+    "tooltip": { "value": "1000" }
+  }
+}
+```
+
+---
+
+### **Section B: React + Tailwind Implementation**
+
+**Design Notes:**
+- Hardware-terminal aesthetic preserved through token usage
+- IBM Plex fonts loaded via Google Fonts (fallbacks included)
+- Scanline texture moved to optional utility class (performance-conscious)
+- CSS-only hover/focus states, no JS for visual feedback
+- Semantic HTML: `<header>`, `<aside>`, `<main>`, `<article>`
+- Mobile-responsive: panels stack on small viewports
+
+```jsx
+import React, { useState } from 'react';
+
+// Design tokens - import into tailwind.config.js
+export const terminalTokens = {
+  colors: {
+    surface: {
+      void: '#050507',
+      panel: '#09090d',
+      surface: '#0d0d12',
+      raised: '#111118',
+      hover: '#16161f',
+    },
+    border: {
+      dim: '#1a1a26',
+      base: '#22222f',
+      lit: '#2e2e3e',
+    },
+    text: {
+      mute: '#3a3a50',
+      dim: '#55556a',
+      mid: '#7a7a96',
+      base: '#b8b8cc',
+      bright: '#e8e8f0',
+      white: '#f4f4f8',
+    },
+    accent: {
+      primary: '#c8f060',
+      dim: '#7a9238',
+      glow: 'rgba(200,240,96,0.08)',
+      glowStrong: 'rgba(200,240,96,0.15)',
+    },
+    status: {
+      warning: '#f5a623',
+      error: '#e05050',
+    },
+  },
+  typography: {
+    fontFamily: {
+      mono: "'IBM Plex Mono', 'Courier New', monospace",
+      sans: "'IBM Plex Sans', 'Segoe UI', sans-serif",
+    },
+  },
+};
+
+// Reusable TerminalCard component
+export function TerminalCard({ children, className = '', active = false }) {
+  return (
+    <article
+      className={`
+        bg-[#111118] border border-[#22222f] rounded-[3px] p-3
+        transition-colors duration-100
+        ${active ? 'border-l-2 border-l-[#c8f060]' : ''}
+        ${className}
+      `}
+    >
+      {children}
+    </article>
+  );
+}
+
+// Reusable TerminalButton component
+export function TerminalButton({ 
+  children, 
+  variant = 'default', 
+  className = '', 
+  ...props 
+}) {
+  const baseStyles = `
+    font-mono text-[10px] tracking-[0.04em] uppercase
+    px-3 py-1.5 rounded-[2px] transition-all duration-120
+    focus:outline-none focus:ring-1 focus:ring-[#2e2e3e]
+  `;
+  
+  const variants = {
+    default: `
+      bg-transparent border border-[#22222f] 
+      text-[#55556a] hover:border-[#2e2e3e] hover:text-[#7a7a96]
+    `,
+    primary: `
+      border border-[#7a9238] bg-[rgba(200,240,96,0.08)] 
+      text-[#c8f060] hover:bg-[rgba(200,240,96,0.15)] 
+      hover:border-[#c8f060] hover:shadow-[0_0_8px_rgba(200,240,96,0.15)]
+    `,
+    ghost: `
+      bg-transparent border-none text-[#3a3a50] 
+      hover:text-[#7a7a96] hover:bg-[#16161f]
+    `,
+  };
+
+  return (
+    <button 
+      className={`${baseStyles} ${variants[variant]} ${className}`}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
+// Reusable TerminalInput component
+export function TerminalInput({ className = '', ...props }) {
+  return (
+    <input
+      className={`
+        w-full bg-[#0d0d12] border border-[#22222f] 
+        text-[#b8b8cc] font-mono text-[11px] 
+        px-2 py-1.5 rounded-[2px] outline-none
+        placeholder:text-[#3a3a50]
+        focus:border-[#2e2e3e] transition-colors
+        ${className}
+      `}
+      {...props}
+    />
+  );
+}
+
+// Reusable TerminalLabel component
+export function TerminalLabel({ children, className = '' }) {
+  return (
+    <span className={`
+      font-mono text-[9px] tracking-[0.12em] uppercase 
+      text-[#3a3a50] ${className}
+    `}>
+      {children}
+    </span>
+  );
+}
+
+// Optional scanline texture utility
+export const scanlineTexture = `
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(255,255,255,0.008) 2px,
+    rgba(255,255,255,0.008) 4px
+  );
+`;
+
+// Example: TerminalLayout component
+export function TerminalLayout({ children, sidebar, aiPanel }) {
+  return (
+    <div className="min-h-screen bg-[#050507] text-[#b8b8cc] font-sans">
+      {/* Topbar */}
+      <header className="h-9 border-b border-[#22222f] bg-[#09090d] 
+        flex items-center justify-between px-4 flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[11px] font-semibold 
+            tracking-[0.12em] uppercase text-[#c8f060]">TLM</span>
+          <div className="w-px h-4 bg-[#22222f]"></div>
+          <span className="font-mono text-[11px] tracking-[0.06em] 
+            uppercase text-[#7a7a96]">Text Library Manager</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-[#c8f060] 
+            shadow-[0_0_6px_#c8f060] animate-pulse"></div>
+          <span className="font-mono text-[10px] tracking-[0.06em] 
+            uppercase text-[#55556a]">Local · Offline</span>
+          <span className="font-mono text-[9px] px-1.5 py-0.5 
+            border border-[#22222f] text-[#55556a] uppercase 
+            tracking-[0.08em] bg-[#09090d]">LLM-ready</span>
+        </div>
+      </header>
+
+      {/* Three-panel layout */}
+      <div className="flex flex-col md:flex-row min-h-[calc(100vh-36px)]">
+        {/* Sidebar */}
+        {sidebar && (
+          <aside className="w-full md:w-56 border-b md:border-b-0 
+            md:border-r border-[#22222f] bg-[#09090d] overflow-y-auto">
+            {sidebar}
+          </aside>
+        )}
+
+        {/* Main content */}
+        <main className="flex-1 bg-[#050507] overflow-y-auto">
+          {children}
+        </main>
+
+        {/* AI Panel */}
+        {aiPanel && (
+          <aside className="w-full md:w-64 border-t md:border-t-0 
+            md:border-l border-[#22222f] bg-[#09090d] overflow-y-auto">
+            {aiPanel}
+          </aside>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Example usage: FileListItem component
+export function FileListItem({ name, meta, chip, active, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`
+        w-full text-left px-3 py-2 cursor-pointer
+        border-l-2 border-transparent transition-colors
+        hover:bg-[#111118]
+        ${active ? 'bg-[#111118] border-l-[#c8f060]' : ''}
+      `}
+    >
+      <div className="font-mono text-[10px] text-[#b8b8cc] 
+        truncate max-w-[130px]">
+        {name}
+      </div>
+      <div className="font-mono text-[9px] text-[#3a3a50] mt-0.5">
+        {meta}
+      </div>
+      {chip && (
+        <span className="inline-block font-mono text-[9px] px-1.5 py-0.5 
+          border border-[#22222f] text-[#55556a] tracking-[0.04em] 
+          mt-1 flex-shrink-0">
+          {chip}
+        </span>
+      )}
+    </button>
+  );
+}
+
+// Demo component showing token usage
+export function TerminalDesignDemo() {
+  const [activeFile, setActiveFile] = useState('AI & DEV TERMS SKILL.txt');
+  
+  const files = [
+    { name: 'AI & DEV TERMS SKILL.txt', meta: '2h ago · 3.2 KB', chip: 'notes' },
+    { name: 'MATH APP IDEA.txt', meta: 'yesterday · 1.1 KB', chip: 'idea' },
+    { name: 'Prompt Engineering Guide.txt', meta: '3 days ago · 5.4 KB', chip: 'guide' },
+  ];
+
+  return (
+    <TerminalLayout
+      sidebar={
+        <div className="p-3 space-y-4">
+          <div>
+            <TerminalLabel className="mb-2">Workspace</TerminalLabel>
+            <TerminalButton variant="ghost" className="w-full justify-start border-dashed">
+              + Choose folder
+            </TerminalButton>
+            <TerminalButton variant="default" className="w-full justify-start mt-2">
+              + New file
+            </TerminalButton>
+          </div>
+          
+          <div>
+            <TerminalLabel className="mb-2">Recents</TerminalLabel>
+            <div className="space-y-0.5">
+              {files.map(file => (
+                <FileListItem
+                  key={file.name}
+                  {...file}
+                  active={activeFile === file.name}
+                  onClick={() => setActiveFile(file.name)}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <div className="p-4 max-w-3xl mx-auto">
+        <TerminalCard className="mb-4">
+          <TerminalLabel className="mb-2 block">Editor Content</TerminalLabel>
+          <div className="font-mono text-[12px] leading-[1.8] space-y-1">
+            <div className="text-[#3a3a50] italic">
+              # Analogy: Building a house with code tools
+            </div>
+            <div className="text-[#e8e8f0] font-medium">
+              Think of it this way — to build a house:
+            </div>
+            <div>
+              <span className="text-[#c8f060]">—</span>{' '}
+              <span className="text-[#f5a623]">Python</span> or{' '}
+              <span className="text-[#f5a623]">JavaScript</span> = The raw building materials.
+            </div>
+            <div>
+              <span className="text-[#c8f060]">—</span>{' '}
+              <span className="text-[#f5a623]">LangChain</span> = A specialized pre-fab kit.
+            </div>
+          </div>
+        </TerminalCard>
+
+        <TerminalCard>
+          <TerminalLabel className="mb-2 block">Interactive States</TerminalLabel>
+          <div className="flex flex-wrap gap-2">
+            <TerminalButton>Default</TerminalButton>
+            <TerminalButton variant="primary">Primary</TerminalButton>
+            <TerminalButton variant="ghost">Ghost</TerminalButton>
+          </div>
+          <p className="font-mono text-[9px] text-[#3a3a50] mt-3">
+            All interactions use CSS transitions. No JS required for hover/focus.
+          </p>
+        </TerminalCard>
+      </div>
+    </TerminalLayout>
+  );
+}
+
+export default TerminalDesignDemo;
+```
+
+---
+
+### **Tailwind Config Snippet**
+
+```js
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        surface: {
+          void: '#050507',
+          panel: '#09090d',
+          surface: '#0d0d12',
+          raised: '#111118',
+          hover: '#16161f',
+        },
+        border: {
+          dim: '#1a1a26',
+          base: '#22222f',
+          lit: '#2e2e3e',
+        },
+        text: {
+          mute: '#3a3a50',
+          dim: '#55556a',
+          mid: '#7a7a96',
+          base: '#b8b8cc',
+          bright: '#e8e8f0',
+          white: '#f4f4f8',
+        },
+        accent: {
+          primary: '#c8f060',
+          dim: '#7a9238',
+          glow: 'rgba(200,240,96,0.08)',
+          glowStrong: 'rgba(200,240,96,0.15)',
+        },
+        status: {
+          warning: '#f5a623',
+          error: '#e05050',
+        },
+      },
+      fontFamily: {
+        mono: ["'IBM Plex Mono'", "'Courier New'", 'monospace'],
+        sans: ["'IBM Plex Sans'", "'Segoe UI'", 'sans-serif'],
+      },
+      fontSize: {
+        xs: ['9px', { lineHeight: '1.5' }],
+        sm: ['10px', { lineHeight: '1.5' }],
+        base: ['11px', { lineHeight: '1.6' }],
+        body: ['12px', { lineHeight: '1.8' }],
+        lg: ['14px', { lineHeight: '1.4' }],
+      },
+      borderRadius: {
+        sm: '2px',
+        md: '3px',
+        lg: '4px',
+      },
+      letterSpacing: {
+        tight: '0.03em',
+        wide: '0.06em',
+        wider: '0.10em',
+        widest: '0.12em',
+      },
+      animation: {
+        pulse: 'ledpulse 3s ease-in-out infinite',
+      },
+      keyframes: {
+        ledpulse: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.5' },
+        },
+      },
+    },
+  },
+};
+```
+
+---
+
+### **Font Loading (Add to index.html or _app.js)**
+
+```html
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
