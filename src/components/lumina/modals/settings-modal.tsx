@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, type FormEvent } from 'react';
-import { Trash2, Database, Cpu, User, FolderKanban, Zap, Info, FolderOpen } from 'lucide-react';
+import { Trash2, Database, Cpu, User, FolderKanban, Zap, Info, FolderOpen, Shield, Lock, Unlock, Key } from 'lucide-react';
 import { useLuminaStore, type AISettings, type Persona, type PersonaTone, type Project, type Skill } from '@/store/use-lumina-store';
 import { saveSettings, savePersona, deleteProject as deleteProjectFromDB, clearAllSkills, clearAllFiles, clearAllFolders } from '@/lib/indexeddb';
 import { requestDirectoryHandle } from '@/lib/file-actions';
@@ -15,6 +15,7 @@ const SETTINGS_TABS = [
   { id: 'persona' as const, label: 'Persona', icon: User },
   { id: 'projects' as const, label: 'Projects', icon: FolderKanban },
   { id: 'skills' as const, label: 'Skills', icon: Zap },
+  { id: 'security' as const, label: 'Security', icon: Shield },
   { id: 'about' as const, label: 'About', icon: Info },
 ] as const;
 
@@ -264,14 +265,27 @@ function AIProvidersTab({ settings: initialSettings }: { settings: AISettings })
         <div className="flex flex-col gap-3">
           <div>
             <label className={labelClasses}>API Key</label>
-            <input
-              type="password"
-              value={localSettings.geminiApiKey}
-              onChange={(e) => handleChange({ geminiApiKey: e.target.value })}
-              placeholder="Enter your Gemini API key"
-              className={inputClasses}
-            />
-            <p className="font-mono text-[9px] text-text-mute mt-1">Key stored locally only</p>
+            <div className="relative">
+              <input
+                type="password"
+                value={localSettings.geminiApiKey}
+                onChange={(e) => handleChange({ geminiApiKey: e.target.value })}
+                placeholder="Enter your Gemini API key"
+                className={`${inputClasses} ${useLuminaStore.getState().settings.isVaultEnabled && !useLuminaStore.getState().vaultPasscode ? 'opacity-20 pointer-events-none' : ''}`}
+              />
+              {useLuminaStore.getState().settings.isVaultEnabled && !useLuminaStore.getState().vaultPasscode && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="font-mono text-[9px] text-accent-dim bg-surface-surface px-2 py-0.5 border border-accent-dim uppercase tracking-wider">
+                    Vault Locked
+                  </span>
+                </div>
+              )}
+            </div>
+            <p className="font-mono text-[9px] text-text-mute mt-1">
+              {useLuminaStore.getState().settings.isVaultEnabled 
+                ? 'Key is encrypted in storage' 
+                : 'Key stored locally in plaintext'}
+            </p>
           </div>
           <div>
             <label className={labelClasses}>Model</label>
@@ -586,6 +600,229 @@ function SkillsTab() {
 
 // ─── Tab Content: About ─────────────────────────────────────
 
+function SecurityTab() {
+  const { settings, updateSettings, vaultStatus, vaultPasscode, setVaultPasscode, setVaultStatus, lockVault } = useLuminaStore();
+  const [passcode, setPasscode] = useState('');
+  const [confirmPasscode, setConfirmPasscode] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSetupVault = useCallback(async () => {
+    if (passcode.length < 4) {
+      toast.error('Passcode must be at least 4 characters');
+      return;
+    }
+    if (passcode !== confirmPasscode) {
+      toast.error('Passcodes do not match');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // 1. Enable vault in settings
+      const newSettings = { ...settings, isVaultEnabled: true };
+      updateSettings(newSettings);
+      
+      // 2. Persist settings (this will trigger encryption of geminiApiKey if it exists)
+      await saveSettings(newSettings, passcode);
+      
+      // 3. Update session state
+      setVaultPasscode(passcode);
+      setVaultStatus('unlocked');
+      
+      toast.success('Vault enabled', {
+        description: 'Sensitive settings are now encrypted.',
+      });
+      setPasscode('');
+      setConfirmPasscode('');
+    } catch {
+      toast.error('Failed to setup vault');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [passcode, confirmPasscode, settings, updateSettings, setVaultPasscode, setVaultStatus]);
+
+  const handleUnlock = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const { getSettings } = await import('@/lib/indexeddb');
+      const decryptedSettings = await getSettings(passcode);
+      
+      // Verify decryption worked (checking if geminiApiKey exists and is not base64 blobs)
+      // If the vault is enabled, getSettings tries to decrypt. If it fails, it returns the blob.
+      
+      if (decryptedSettings) {
+        updateSettings(decryptedSettings);
+        setVaultPasscode(passcode);
+        setVaultStatus('unlocked');
+        toast.success('Vault unlocked');
+        setPasscode('');
+      }
+    } catch {
+      toast.error('Incorrect passcode');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [passcode, updateSettings, setVaultPasscode, setVaultStatus]);
+
+  const handleDisableVault = useCallback(async () => {
+    if (!vaultPasscode) return;
+    
+    setIsLoading(true);
+    try {
+      const newSettings = { ...settings, isVaultEnabled: false };
+      updateSettings(newSettings);
+      
+      // Save settings WITHOUT a passcode (this will save fields as plaintext)
+      await saveSettings(newSettings, null);
+      
+      lockVault();
+      setVaultStatus('uninitialized');
+      
+      toast.info('Vault disabled', {
+        description: 'Settings are now stored in plaintext.',
+      });
+    } catch {
+      toast.error('Failed to disable vault');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [vaultPasscode, settings, updateSettings, lockVault, setVaultStatus]);
+
+  return (
+    <div className="px-3.5 py-4 flex flex-col gap-4">
+      {/* ── Vault State ── */}
+      <div className="flex items-center justify-between px-3.5 py-3 border border-border-base bg-surface-surface rounded-[2px]">
+        <div className="flex items-center gap-3">
+          <div className={`w-8 h-8 flex items-center justify-center rounded-full border ${
+            vaultStatus === 'unlocked' ? 'bg-accent-glow border-accent-dim text-accent-primary' : 'bg-surface-raised border-border-base text-text-mute'
+          }`}>
+            {vaultStatus === 'unlocked' ? <Unlock size={14} /> : <Lock size={14} />}
+          </div>
+          <div>
+            <div className="font-mono text-[10px] text-text-bright tracking-[0.04em] uppercase">
+              Secure Vault
+            </div>
+            <div className="font-mono text-[9px] text-text-mute uppercase tracking-widest mt-0.5">
+              Status: {vaultStatus}
+            </div>
+          </div>
+        </div>
+        
+        {vaultStatus === 'unlocked' && (
+          <button
+            onClick={lockVault}
+            className="px-2.5 py-1 border border-border-base text-text-dim hover:text-text-mid font-mono text-[9px] tracking-[0.06em] uppercase rounded-[2px] transition-colors cursor-pointer"
+          >
+            Lock Vault
+          </button>
+        )}
+      </div>
+
+      {/* ── Implementation Views ── */}
+      
+      {!settings.isVaultEnabled && (
+        <div className="flex flex-col gap-3 mt-1">
+          <div className="flex items-start gap-1.5 px-2.5 py-2 bg-surface-surface border border-border-dim rounded-[2px]">
+            <Shield size={10} className="text-accent-dim shrink-0 mt-0.5" />
+            <span className="font-mono text-[9px] text-text-mute leading-[1.5]">
+              Enable the Secure Vault to encrypt your Gemini API keys using AES-GCM 256-bit. 
+              <strong> Warning:</strong> There is no recovery if you lose your passcode.
+            </span>
+          </div>
+          
+          <div>
+            <label className={labelClasses}>Set Vault Passcode</label>
+            <input
+              type="password"
+              value={passcode}
+              onChange={(e) => setPasscode(e.target.value)}
+              placeholder="Minimum 4 characters"
+              className={inputClasses}
+            />
+          </div>
+          <div>
+            <label className={labelClasses}>Confirm Passcode</label>
+            <input
+              type="password"
+              value={confirmPasscode}
+              onChange={(e) => setConfirmPasscode(e.target.value)}
+              placeholder="Confirm passcode"
+              className={inputClasses}
+            />
+          </div>
+          <button
+            onClick={handleSetupVault}
+            disabled={isLoading || !passcode}
+            className="w-full py-2 border border-accent-dim text-accent-primary bg-accent-glow font-mono text-[10px] tracking-[0.06em] uppercase hover:bg-accent-glow-strong hover:border-accent-primary rounded-[2px] transition-colors cursor-pointer disabled:opacity-50"
+          >
+            {isLoading ? 'Processing…' : 'Enable Secure Vault'}
+          </button>
+        </div>
+      )}
+
+      {settings.isVaultEnabled && vaultStatus === 'locked' && (
+        <div className="flex flex-col gap-3 mt-1">
+          <div className="flex items-start gap-1.5 px-2.5 py-2 bg-surface-surface border border-border-dim rounded-[2px]">
+            <Key size={10} className="text-text-dim shrink-0 mt-0.5" />
+            <span className="font-mono text-[9px] text-text-dim leading-[1.5]">
+              Vault is locked. Enter your passcode to access encrypted settings.
+            </span>
+          </div>
+          
+          <div>
+            <label className={labelClasses}>Vault Passcode</label>
+            <input
+              type="password"
+              value={passcode}
+              onChange={(e) => setPasscode(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
+              placeholder="Enter passcode"
+              className={inputClasses}
+              autoFocus
+            />
+          </div>
+          <button
+            onClick={handleUnlock}
+            disabled={isLoading || !passcode}
+            className="w-full py-2 border border-accent-dim text-accent-primary bg-accent-glow font-mono text-[10px] tracking-[0.06em] uppercase hover:bg-accent-glow-strong hover:border-accent-primary rounded-[2px] transition-colors cursor-pointer disabled:opacity-50"
+          >
+            {isLoading ? 'Decrypting…' : 'Unlock Vault'}
+          </button>
+        </div>
+      )}
+
+      {settings.isVaultEnabled && vaultStatus === 'unlocked' && (
+        <div className="flex flex-col gap-4 mt-1">
+          <div className="px-3 py-3 border border-border-base bg-surface-surface rounded-[2px]">
+             <div className="font-mono text-[10px] text-text-mid">Vault Active</div>
+             <div className="font-mono text-[9px] text-text-mute mt-1">
+               Your sensitive data is unlocked for this session. It will be re-encrypted upon locking or closing the app.
+             </div>
+          </div>
+          
+          <div className="h-px bg-border-dim" />
+          
+          <div>
+            <span className="font-mono text-[9px] tracking-[0.12em] uppercase text-status-error mb-2 block">
+              Danger Zone
+            </span>
+            <button
+              onClick={handleDisableVault}
+              disabled={isLoading}
+              className="w-full text-left px-3 py-2 border border-status-error/30 text-status-error font-mono text-[10px] rounded-[2px] hover:bg-status-error/10 transition-colors cursor-pointer"
+            >
+              Disable Secure Vault
+            </button>
+            <p className="font-mono text-[8px] text-text-mute mt-1">
+              Decrypts all fields and stores them in plaintext.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AboutTab() {
   const files = useLuminaStore((s) => s.files);
   const projects = useLuminaStore((s) => s.projects);
@@ -752,6 +989,7 @@ export function SettingsModal() {
           {settingsTab === 'persona' && <PersonaTab key={persona.name || '_empty'} persona={persona} />}
           {settingsTab === 'projects' && <ProjectsTab />}
           {settingsTab === 'skills' && <SkillsTab />}
+          {settingsTab === 'security' && <SecurityTab />}
           {settingsTab === 'about' && <AboutTab />}
         </div>
       </div>

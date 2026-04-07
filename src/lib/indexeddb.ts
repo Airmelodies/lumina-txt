@@ -3,8 +3,9 @@
 // All data stays on user's machine. Zero cloud.
 
 import { TextFile, FolderNode, AISettings } from '@/store/use-lumina-store';
-import type { Skill } from '@/lib/skill-parser';
-import type { Project, Persona } from '@/store/use-lumina-store';
+import { Skill } from '@/lib/skill-parser';
+import { Project, Persona } from '@/store/use-lumina-store';
+import { encrypt, decrypt } from '@/lib/vault';
 
 const DB_NAME = 'lumina-txt';
 const DB_VERSION = 4; // Bumped for projects + persona stores
@@ -228,23 +229,51 @@ export async function deleteConversation(fileId: string): Promise<void> {
 
 // ─── Settings Operations ───────────────────────────────────
 
-export async function getSettings(): Promise<AISettings | null> {
+export async function getSettings(passcode?: string | null): Promise<AISettings | null> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction('settings', 'readonly');
     const store = tx.objectStore('settings');
     const request = store.get('ai-settings');
-    request.onsuccess = () => resolve(request.result?.value ?? null);
+    request.onsuccess = async () => {
+      const settings = request.result?.value as AISettings;
+      if (!settings) {
+        resolve(null);
+        return;
+      }
+
+      // If vault is enabled and we have a passcode, decrypt the sensitive fields
+      if (settings.isVaultEnabled && passcode && settings.geminiApiKey) {
+        try {
+          const decryptedKey = await decrypt(settings.geminiApiKey, passcode);
+          resolve({ ...settings, geminiApiKey: decryptedKey });
+        } catch (err) {
+          console.warn('[IndexedDB] Failed to decrypt settings:', err);
+          resolve(settings); // Return as-is (likely encrypted)
+        }
+      } else {
+        resolve(settings);
+      }
+    };
     request.onerror = () => reject(request.error);
   });
 }
 
-export async function saveSettings(settings: AISettings): Promise<void> {
+export async function saveSettings(settings: AISettings, passcode?: string | null): Promise<void> {
   const db = await openDB();
+  
+  // Create a clone to avoid mutating the original store object
+  const settingsToSave = { ...settings };
+
+  // If vault is enabled and we have a passcode, encrypt sensitive fields
+  if (settings.isVaultEnabled && passcode && settings.geminiApiKey) {
+    settingsToSave.geminiApiKey = await encrypt(settings.geminiApiKey, passcode);
+  }
+
   return new Promise((resolve, reject) => {
     const tx = db.transaction('settings', 'readwrite');
     const store = tx.objectStore('settings');
-    store.put({ key: 'ai-settings', value: settings });
+    store.put({ key: 'ai-settings', value: settingsToSave });
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });

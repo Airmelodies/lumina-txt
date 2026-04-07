@@ -53,6 +53,9 @@ export default function Home() {
 
         if (settings) {
           useLuminaStore.getState().updateSettings(settings);
+          if (settings.isVaultEnabled) {
+            useLuminaStore.getState().setVaultStatus('locked');
+          }
         }
 
         if (skills.length > 0) {
